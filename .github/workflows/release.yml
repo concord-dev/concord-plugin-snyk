@@ -18,13 +18,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: plugin
+
+      - uses: actions/checkout@v4
+        with:
+          repository: concord-dev/concord
+          path: concord
+          ref: main
 
       - uses: actions/setup-go@v5
         with:
           go-version: '1.25'
           cache: true
+          cache-dependency-path: plugin/go.sum
 
       - name: Build linux/amd64
+        working-directory: plugin
         env:
           GOOS: linux
           GOARCH: amd64
@@ -45,6 +55,7 @@ jobs:
 
       - name: Push OCI artifact
         id: push
+        working-directory: plugin
         run: |
           set -euo pipefail
           TAG="${GITHUB_REF#refs/tags/}"
