@@ -1,4 +1,5 @@
-package main
+// Package snyk implements the Concord collector for Snyk vulnerability evidence.
+package snyk
 
 import (
 	"context"
@@ -16,22 +17,37 @@ import (
 
 var errMissingToken = errors.New("SNYK_TOKEN is not set")
 
+// DefaultBaseURL and DefaultAPIVersion are the fallback configuration values
+// used when the corresponding environment variables are unset.
 const (
-	defaultBaseURL    = "https://api.snyk.io"
-	defaultAPIVersion = "2024-10-15"
-	probeTimeout      = 15 * time.Second
-	orgIssuesTimeout  = 120 * time.Second
-	containerTimeout  = 180 * time.Second
+	DefaultBaseURL    = "https://api.snyk.io"
+	DefaultAPIVersion = "2024-10-15"
+
+	probeTimeout     = 15 * time.Second
+	orgIssuesTimeout = 120 * time.Second
+	containerTimeout = 180 * time.Second
 )
 
-type collector struct {
+// Collector answers Snyk evidence types by querying the Snyk REST API.
+type Collector struct {
 	baseURL    string
 	token      string
 	apiVersion string
 	http       *http.Client
 }
 
-func (c *collector) Capabilities() plugin.Capabilities {
+// New returns a Snyk collector configured with the given base URL, API token,
+// API version, and HTTP client.
+func New(baseURL, token, apiVersion string, httpClient *http.Client) *Collector {
+	return &Collector{
+		baseURL:    baseURL,
+		token:      token,
+		apiVersion: apiVersion,
+		http:       httpClient,
+	}
+}
+
+func (c *Collector) Capabilities() plugin.Capabilities {
 	return plugin.Capabilities{
 		Source:         "snyk",
 		Version:        "v0.1.0",
@@ -46,7 +62,7 @@ func (c *collector) Capabilities() plugin.Capabilities {
 	}
 }
 
-func (c *collector) Probe(ctx context.Context) (string, error) {
+func (c *Collector) Probe(ctx context.Context) (string, error) {
 	if c.token == "" {
 		return "", errMissingToken
 	}
@@ -58,7 +74,7 @@ func (c *collector) Probe(ctx context.Context) (string, error) {
 	return "authenticated against " + c.baseURL, nil
 }
 
-func (c *collector) Collect(ctx context.Context, ref plugin.EvidenceRef) (any, error) {
+func (c *Collector) Collect(ctx context.Context, ref plugin.EvidenceRef) (any, error) {
 	if c.token == "" {
 		return nil, errMissingToken
 	}
@@ -74,7 +90,7 @@ func (c *collector) Collect(ctx context.Context, ref plugin.EvidenceRef) (any, e
 	}
 }
 
-func (c *collector) collectOrgIssues(parent context.Context, ref plugin.EvidenceRef) (any, error) {
+func (c *Collector) collectOrgIssues(parent context.Context, ref plugin.EvidenceRef) (any, error) {
 	orgID, err := requireStringParam(ref, "org_id")
 	if err != nil {
 		return nil, err
@@ -97,7 +113,7 @@ func (c *collector) collectOrgIssues(parent context.Context, ref plugin.Evidence
 	}, nil
 }
 
-func (c *collector) collectContainerIssues(parent context.Context, ref plugin.EvidenceRef) (any, error) {
+func (c *Collector) collectContainerIssues(parent context.Context, ref plugin.EvidenceRef) (any, error) {
 	orgID, err := requireStringParam(ref, "org_id")
 	if err != nil {
 		return nil, err
@@ -144,7 +160,7 @@ func (c *collector) collectContainerIssues(parent context.Context, ref plugin.Ev
 	}, nil
 }
 
-func (c *collector) listOrgIssues(ctx context.Context, orgID, severities, statusFilter string) ([]map[string]any, error) {
+func (c *Collector) listOrgIssues(ctx context.Context, orgID, severities, statusFilter string) ([]map[string]any, error) {
 	q := url.Values{}
 	q.Set("version", c.apiVersion)
 	q.Set("limit", "100")
@@ -153,7 +169,7 @@ func (c *collector) listOrgIssues(ctx context.Context, orgID, severities, status
 	return c.iterateIssues(ctx, fmt.Sprintf("/rest/orgs/%s/issues?%s", url.PathEscape(orgID), q.Encode()))
 }
 
-func (c *collector) listProjectIssues(ctx context.Context, orgID, projectID, severities, statusFilter string) ([]map[string]any, error) {
+func (c *Collector) listProjectIssues(ctx context.Context, orgID, projectID, severities, statusFilter string) ([]map[string]any, error) {
 	q := url.Values{}
 	q.Set("version", c.apiVersion)
 	q.Set("limit", "100")
@@ -164,7 +180,7 @@ func (c *collector) listProjectIssues(ctx context.Context, orgID, projectID, sev
 	return c.iterateIssues(ctx, fmt.Sprintf("/rest/orgs/%s/issues?%s", url.PathEscape(orgID), q.Encode()))
 }
 
-func (c *collector) iterateIssues(ctx context.Context, path string) ([]map[string]any, error) {
+func (c *Collector) iterateIssues(ctx context.Context, path string) ([]map[string]any, error) {
 	var out []map[string]any
 	for path != "" {
 		raw, err := c.get(ctx, path)
@@ -183,7 +199,7 @@ func (c *collector) iterateIssues(ctx context.Context, path string) ([]map[strin
 	return out, nil
 }
 
-func (c *collector) listProjects(ctx context.Context, orgID, projectType string) ([]project, error) {
+func (c *Collector) listProjects(ctx context.Context, orgID, projectType string) ([]project, error) {
 	q := url.Values{}
 	q.Set("version", c.apiVersion)
 	q.Set("limit", "100")
@@ -329,7 +345,7 @@ func nextPath(next, baseURL string) string {
 	return next
 }
 
-func (c *collector) get(ctx context.Context, path string) ([]byte, error) {
+func (c *Collector) get(ctx context.Context, path string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
 	if err != nil {
 		return nil, err
