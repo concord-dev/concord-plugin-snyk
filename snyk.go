@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	plugin "github.com/concord-dev/concord/pkg/plugin"
+	plugin "github.com/concord-dev/concord-plugin-sdk/plugin"
 )
 
 var errMissingToken = errors.New("SNYK_TOKEN is not set")
