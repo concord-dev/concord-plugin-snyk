@@ -348,7 +348,7 @@ func nextPath(next, baseURL string) string {
 func (c *Collector) get(ctx context.Context, path string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("building snyk request: %w", err)
 	}
 	req.Header.Set("Accept", "application/vnd.api+json")
 	req.Header.Set("Authorization", "token "+c.token)
@@ -356,12 +356,12 @@ func (c *Collector) get(ctx context.Context, path string) ([]byte, error) {
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("performing snyk request %s: %w", path, err)
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reading snyk response: %w", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return nil, fmt.Errorf("snyk %s returned %d: %s", path, resp.StatusCode, string(body))
