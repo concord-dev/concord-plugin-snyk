@@ -2,7 +2,7 @@ module github.com/concord-dev/concord-plugin-snyk
 
 go 1.25.11
 
-require github.com/concord-dev/concord-plugin-sdk v0.0.0-00010101000000-000000000000
+require github.com/concord-dev/concord-plugin-sdk v0.1.0
 
 require (
 	github.com/fatih/color v1.18.0 // indirect
@@ -20,5 +20,3 @@ require (
 	google.golang.org/grpc v1.81.1 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
-
-replace github.com/concord-dev/concord-plugin-sdk => ../concord-plugin-sdk
