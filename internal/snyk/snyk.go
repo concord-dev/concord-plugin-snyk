@@ -51,7 +51,7 @@ func (c *Collector) Capabilities() plugin.Capabilities {
 	return plugin.Capabilities{
 		Source:         "snyk",
 		Version:        "v0.1.0",
-		SupportedTypes: []string{"org_issues", "container_issues"},
+		SupportedTypes: []string{"org_issues", "container_issues", "org_projects"},
 		RequiredEnv:    []string{"SNYK_TOKEN"},
 		OptionalEnv:    []string{"SNYK_BASE_URL", "SNYK_API_VERSION"},
 		Permissions: plugin.Permissions{
@@ -83,6 +83,8 @@ func (c *Collector) Collect(ctx context.Context, ref plugin.EvidenceRef) (any, e
 		return c.collectOrgIssues(ctx, ref)
 	case "container_issues":
 		return c.collectContainerIssues(ctx, ref)
+	case "org_projects":
+		return c.collectOrgProjects(ctx, ref)
 	case "":
 		return nil, fmt.Errorf("snyk collector requires evidence type")
 	default:
